@@ -6,8 +6,8 @@ const router = express.Router();
 
 router.post("/", AuthenticationController.login);
 
-router.put("/", authMiddleware, AuthenticationController.refresh);
+router.put("/", AuthenticationController.refresh);
 
-router.delete("/", authMiddleware, AuthenticationController.logout);
+router.delete("/", AuthenticationController.logout);
 
 module.exports = router;

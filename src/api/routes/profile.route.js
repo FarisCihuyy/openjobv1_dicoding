@@ -12,10 +12,4 @@ router.get(
 );
 router.get("/bookmarks", authMiddleware, ProfileController.getMyBookmarks);
 
-// router.post("/", authMiddleware, JobController.create);
-// router.put("/:id", authMiddleware, JobController.update);
-// router.delete("/:id", authMiddleware, JobController.remove);
-
-// router.use("/:jobId/bookmark", jobBookmarkRouter);
-
 module.exports = router;
