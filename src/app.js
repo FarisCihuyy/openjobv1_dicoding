@@ -10,6 +10,8 @@ const companyRoutes = require("./api/routes/company.route");
 const categoryRoutes = require("./api/routes/category.route");
 const jobRoutes = require("./api/routes/job.route");
 const applicationRoutes = require("./api/routes/application.route");
+const { bookmarksRouter } = require("./api/routes/bookmark.route");
+const profileRoutes = require("./api/routes/profile.route");
 
 const app = express();
 
@@ -25,6 +27,8 @@ app.use("/companies", companyRoutes);
 app.use("/categories", categoryRoutes);
 app.use("/jobs", jobRoutes);
 app.use("/applications", applicationRoutes);
+app.use("/bookmarks", bookmarksRouter);
+app.use("/profile", profileRoutes);
 
 app.get("/", (req, res) => {
   return response(res, 200, "Welcome to OpenJob API", null);

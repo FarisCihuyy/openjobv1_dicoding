@@ -1,6 +1,6 @@
 const pool = require("../../database/pool");
 const { InvariantError, NotFoundError } = require("../../exceptions");
-const { generateId } = require("../../utils");
+const { generateId, formatApplication } = require("../../utils");
 const response = require("../../utils/response");
 const {
   applicationSchema,
@@ -17,15 +17,22 @@ const APPLICATION_SELECT = `
   u.email AS user_email,
   j.id    AS job_id,
   j.title AS job_title,
+  j.location_city    AS job_location,
+  j.description      AS job_description,
   c.id    AS company_id,
-  c.name  AS company_name
+  c.name  AS company_name,
+  c.location  AS company_location,
+  d.id        AS document_id,
+  d.file_name AS document_file_name,
+  d.file_url  AS document_file_url
 `;
 
 const APPLICATION_JOIN = `
   FROM applications a
-  JOIN users     u ON a.user_id    = u.id
-  JOIN jobs      j ON a.job_id     = j.id
-  JOIN companies c ON j.company_id = c.id
+  JOIN users     u ON a.user_id     = u.id
+  JOIN jobs      j ON a.job_id      = j.id
+  JOIN companies c ON j.company_id  = c.id
+  LEFT JOIN documents d ON a.document_id = d.id
 `;
 
 const ApplicationController = {
@@ -54,10 +61,10 @@ const ApplicationController = {
         );
       }
 
-      //   const document = await pool.query(
-      //     "SELECT id FROM documents WHERE id = $1 AND user_id = $2",
-      //     [value.document_id, userId],
-      //   );
+      // const document = await pool.query(
+      //   "SELECT id FROM documents WHERE id = $1 AND user_id = $2",
+      //   [value.document_id, userId],
+      // );
 
       //   if (document.rows.length === 0) {
       //     return next(new NotFoundError(`Document not found`));
@@ -83,7 +90,12 @@ const ApplicationController = {
         [id, userId, value.job_id],
       );
 
-      return response(res, 201, "Application submitted", result.rows[0]);
+      return response(
+        res,
+        201,
+        "Application submitted",
+        formatApplication(result.rows[0]),
+      );
     } catch (error) {
       next(error);
     }
@@ -96,7 +108,7 @@ const ApplicationController = {
       );
 
       return response(res, 200, "Applications retrieved", {
-        applications: result.rows,
+        applications: result.rows.map(formatApplication),
       });
     } catch (error) {
       next(error);
@@ -116,7 +128,12 @@ const ApplicationController = {
         return next(new NotFoundError(`Application not found`));
       }
 
-      return response(res, 200, "Application retrieved", result.rows[0]);
+      return response(
+        res,
+        200,
+        "Application retrieved",
+        formatApplication(result.rows[0]),
+      );
     } catch (error) {
       next(error);
     }
@@ -142,7 +159,7 @@ const ApplicationController = {
       );
 
       return response(res, 200, "Applications retrieved", {
-        applications: result.rows,
+        applications: result.rows.map(formatApplication),
       });
     } catch (error) {
       next(error);
@@ -203,7 +220,12 @@ const ApplicationController = {
         [value.status, id],
       );
 
-      return response(res, 200, "Application status updated", result.rows[0]);
+      return response(
+        res,
+        200,
+        "Application status updated",
+        formatApplication(result.rows[0]),
+      );
     } catch (error) {
       next(error);
     }
