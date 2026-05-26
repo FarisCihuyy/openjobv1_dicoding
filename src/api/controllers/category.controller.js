@@ -1,6 +1,5 @@
 const pool = require("../../database/pool");
 const response = require("../../utils/response");
-
 const {
   InvariantError,
   NotFoundError,

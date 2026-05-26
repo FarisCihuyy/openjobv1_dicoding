@@ -6,6 +6,7 @@ const response = require("./utils/response");
 
 const userRoutes = require("./api/routes/user.route");
 const authRoutes = require("./api/routes/auth.route");
+const companyRoutes = require("./api/routes/company.route");
 const categoryRoutes = require("./api/routes/category.route");
 
 const app = express();
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/users", userRoutes);
 app.use("/authentications", authRoutes);
+app.use("/companies", companyRoutes);
 app.use("/categories", categoryRoutes);
 
 app.get("/", (req, res) => {
