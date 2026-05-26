@@ -2,7 +2,7 @@ const pool = require("../../database/pool");
 const { NotFoundError, InvariantError } = require("../../exceptions");
 const { generateId } = require("../../utils");
 const response = require("../../utils/response");
-const jobSchema = require("../validations/job.validation");
+const { jobSchema, updateJobSchema } = require("../validations/job.validation");
 
 const JOB_SELECT = `
   j.id,
@@ -194,7 +194,7 @@ const JobController = {
     try {
       const { id } = req.params;
 
-      const { error, value } = jobSchema.validate(req.body);
+      const { error, value } = updateJobSchema.validate(req.body);
 
       if (error) {
         return next(new InvariantError(error.details[0].message));
@@ -208,57 +208,42 @@ const JobController = {
         return next(new NotFoundError(`Job not found`));
       }
 
-      const company = await pool.query(
-        "SELECT id FROM companies WHERE id = $1",
-        [value.company_id],
-      );
+      // const company = await pool.query(
+      //   "SELECT id FROM companies WHERE id = $1",
+      //   [value.company_id],
+      // );
 
-      if (company.rows.length === 0) {
-        return next(new NotFoundError(`Company not found`));
-      }
+      // if (company.rows.length === 0) {
+      //   return next(new NotFoundError(`Company not found`));
+      // }
 
-      const category = await pool.query(
-        "SELECT id FROM categories WHERE id = $1",
-        [value.category_id],
-      );
+      // const category = await pool.query(
+      //   "SELECT id FROM categories WHERE id = $1",
+      //   [value.category_id],
+      // );
 
-      if (category.rows.length === 0) {
-        return next(new NotFoundError(`Category not found`));
-      }
+      // if (category.rows.length === 0) {
+      //   return next(new NotFoundError(`Category not found`));
+      // }
 
-      const result = await pool.query(
-        `UPDATE jobs
-         SET
-           title            = $1,
-           description      = $2,
-           company_id       = $3,
-           category_id      = $4,
-           job_type         = $5,
-           experience_level = $6,
-           location_type    = $7,
-           location_city    = $8,
-           salary_min       = $9,
-           salary_max       = $10,
-           is_salary_visible = $11,
-           status           = $12
-         WHERE id = $13
-         RETURNING *`,
-        [
-          value.title,
-          value.description,
-          value.company_id,
-          value.category_id,
-          value.job_type,
-          value.experience_level,
-          value.location_type,
-          value.location_city,
-          value.salary_min,
-          value.salary_max,
-          value.is_salary_visible,
-          value.status,
-          id,
-        ],
-      );
+      const fields = [];
+      const values = [];
+
+      Object.entries(value).forEach(([key, val], index) => {
+        fields.push(`${key} = $${index + 1}`);
+        values.push(val);
+      });
+
+      values.push(id);
+
+      const query = `
+         UPDATE jobs
+         SET ${fields.join(", ")}
+         WHERE id = $${values.length}
+         RETURNING *
+      `;
+
+      const result = await pool.query(query, values);
 
       return response(res, 200, "Job updated", result.rows[0]);
     } catch (error) {
