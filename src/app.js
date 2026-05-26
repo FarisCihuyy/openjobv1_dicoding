@@ -9,6 +9,7 @@ const authRoutes = require("./api/routes/auth.route");
 const companyRoutes = require("./api/routes/company.route");
 const categoryRoutes = require("./api/routes/category.route");
 const jobRoutes = require("./api/routes/job.route");
+const applicationRoutes = require("./api/routes/application.route");
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/authentications", authRoutes);
 app.use("/companies", companyRoutes);
 app.use("/categories", categoryRoutes);
 app.use("/jobs", jobRoutes);
+app.use("/applications", applicationRoutes);
 
 app.get("/", (req, res) => {
   return response(res, 200, "Welcome to OpenJob API", null);
