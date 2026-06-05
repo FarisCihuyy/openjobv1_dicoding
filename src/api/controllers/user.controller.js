@@ -4,11 +4,20 @@ const { NotFoundError, InvariantError } = require("../../exceptions");
 const response = require("../../utils/response");
 const { userSchema } = require("../validations/user.validation");
 const { generateId } = require("../../utils");
+const cache = require("../../utils/cache");
 
 const userController = {
   async getUserById(req, res, next) {
     try {
       const { id } = req.params;
+      const cacheKey = `users:${id}`;
+      const cached = await cache.get(cacheKey);
+
+      if (cached) {
+        return response(res, 200, "User found", cached, {
+          "X-Data-Source": "cache",
+        });
+      }
 
       const result = await pool.query(
         "SELECT id, name, email, role FROM users WHERE id = $1",
@@ -19,6 +28,7 @@ const userController = {
         return next(new NotFoundError("User not found"));
       }
 
+      await cache.set(cacheKey, result.rows[0]);
       return response(res, 200, "User found", result.rows[0]);
     } catch (error) {
       next(error);

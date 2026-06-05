@@ -134,8 +134,11 @@ const ApplicationController = {
       const cacheKey = `applications:${id}`;
 
       const cached = await cache.get(cacheKey);
-      if (cached) return response(res, 200, "Application retrieved", cached);
-
+      if (cached) {
+        return response(res, 200, "Application retrieved", cached, {
+          "X-Data-Source": "cache",
+        });
+      }
       const result = await pool.query(
         `SELECT ${APPLICATION_SELECT} ${APPLICATION_JOIN} WHERE a.id = $1`,
         [id],
@@ -161,9 +164,17 @@ const ApplicationController = {
 
       const cached = await cache.get(cacheKey);
       if (cached) {
-        return response(res, 200, "Applications retrieved", {
-          applications: cached,
-        });
+        return response(
+          res,
+          200,
+          "Applications retrieved",
+          {
+            applications: cached,
+          },
+          {
+            "X-Data-Source": "cache",
+          },
+        );
       }
 
       const user = await pool.query("SELECT id FROM users WHERE id = $1", [
@@ -198,9 +209,17 @@ const ApplicationController = {
 
       const cached = await cache.get(cacheKey);
       if (cached) {
-        return response(res, 200, "Applications retrieved", {
-          applications: cached,
-        });
+        return response(
+          res,
+          200,
+          "Applications retrieved",
+          {
+            applications: cached,
+          },
+          {
+            "X-Data-Source": "cache",
+          },
+        );
       }
 
       const result = await pool.query(

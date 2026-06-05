@@ -12,12 +12,11 @@ const JOB_SELECT = `
   j.experience_level,
   j.location_type,
   j.location_city,
-  j.salary_min,
-  j.salary_max,
-  j.is_salary_visible,
   j.status,
   c.id          AS company_id,
   c.name        AS company_name,
+  c.location    AS company_location,
+  cat.id        AS category_id,
   cat.name      AS category_name
 `;
 

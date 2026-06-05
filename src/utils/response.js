@@ -7,18 +7,20 @@
  * @return {object}
  */
 
-const response = (res, statusCode, message, data = undefined) => {
-  const payload = {
+const response = (res, statusCode, message, data, headers = {}) => {
+  const finalHeaders = {
+    "X-Data-Source": "database",
+    ...headers,
+  };
+
+  res.set(finalHeaders);
+
+  return res.status(statusCode).json({
     code: statusCode,
     status: statusCode < 400 ? "success" : "failed",
     message,
-  };
-
-  if (data) {
-    payload.data = data;
-  }
-
-  return res.status(statusCode).json(payload);
+    ...(data && { data }),
+  });
 };
 
 module.exports = response;

@@ -118,7 +118,15 @@ const BookmarkController = {
 
       const cached = await cache.get(cacheKey);
       if (cached) {
-        return response(res, 200, "Bookmarks retrieved", { bookmarks: cached });
+        return response(
+          res,
+          200,
+          "Bookmarks retrieved",
+          { bookmarks: cached },
+          {
+            "X-Data-Source": "cache",
+          },
+        );
       }
 
       const result = await pool.query(

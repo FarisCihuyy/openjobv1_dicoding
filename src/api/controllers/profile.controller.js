@@ -62,6 +62,7 @@ const ProfileController = {
         u.email AS user_email,
         j.id    AS job_id,
         j.title AS job_title,
+        j.location_city AS job_location_city,
         c.id    AS company_id,
         c.name  AS company_name,
         d.id        AS document_id,

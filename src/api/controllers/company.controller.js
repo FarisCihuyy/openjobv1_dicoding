@@ -35,7 +35,9 @@ const CompanyController = {
 
       const cached = await cache.get(cacheKey);
       if (cached) {
-        return response(res, 200, "Companies retrieved", cached);
+        return response(res, 200, "Companies retrieved", cached, {
+          "X-Data-Source": "cache",
+        });
       }
 
       const result = await pool.query(`SELECT * FROM companies WHERE id = $1`, [
