@@ -2,10 +2,12 @@ const pool = require("../../database/pool");
 const { InvariantError, NotFoundError } = require("../../exceptions");
 const { generateId, formatApplication } = require("../../utils");
 const response = require("../../utils/response");
+const cache = require("../../utils/cache");
 const {
   applicationSchema,
   updateApplicationSchema,
 } = require("../validations/application.validation");
+const { publishApplicationNotification } = require("../../rabbitmq/producer");
 
 const APPLICATION_SELECT = `
   a.id,
@@ -90,6 +92,17 @@ const ApplicationController = {
         [id, userId, value.job_id],
       );
 
+      await cache.del(
+        `applications:user:${userId}`,
+        `applications:job:${value.job_id}`,
+      );
+
+      await publishApplicationNotification({
+        applicationId: id,
+        jobId: value.job_id,
+        applicantId: userId,
+      });
+
       return response(
         res,
         201,
@@ -118,6 +131,10 @@ const ApplicationController = {
   async getById(req, res, next) {
     try {
       const { id } = req.params;
+      const cacheKey = `applications:${id}`;
+
+      const cached = await cache.get(cacheKey);
+      if (cached) return response(res, 200, "Application retrieved", cached);
 
       const result = await pool.query(
         `SELECT ${APPLICATION_SELECT} ${APPLICATION_JOIN} WHERE a.id = $1`,
@@ -128,12 +145,10 @@ const ApplicationController = {
         return next(new NotFoundError(`Application not found`));
       }
 
-      return response(
-        res,
-        200,
-        "Application retrieved",
-        formatApplication(result.rows[0]),
-      );
+      const data = formatApplication(result.rows[0]);
+      await cache.set(cacheKey, data);
+
+      return response(res, 200, "Application retrieved", data);
     } catch (error) {
       next(error);
     }
@@ -142,6 +157,14 @@ const ApplicationController = {
   async getByUser(req, res, next) {
     try {
       const { userId } = req.params;
+      const cacheKey = `applications:user:${userId}`;
+
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return response(res, 200, "Applications retrieved", {
+          applications: cached,
+        });
+      }
 
       const user = await pool.query("SELECT id FROM users WHERE id = $1", [
         userId,
@@ -158,8 +181,10 @@ const ApplicationController = {
         [userId],
       );
 
+      const data = result.rows.map(formatApplication);
+      await cache.set(cacheKey, data);
       return response(res, 200, "Applications retrieved", {
-        applications: result.rows.map(formatApplication),
+        applications: data,
       });
     } catch (error) {
       next(error);
@@ -169,68 +194,62 @@ const ApplicationController = {
   async getByJob(req, res, next) {
     try {
       const { jobId } = req.params;
+      const cacheKey = `applications:job:${jobId}`;
 
-      const job = await pool.query("SELECT id FROM jobs WHERE id = $1", [
-        jobId,
-      ]);
-
-      //   if (job.rows.length === 0) {
-      //     return next(new NotFoundError(`Job not found`));
-      //   }
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return response(res, 200, "Applications retrieved", {
+          applications: cached,
+        });
+      }
 
       const result = await pool.query(
         `SELECT ${APPLICATION_SELECT} ${APPLICATION_JOIN}
-         WHERE a.job_id = $1
-         ORDER BY a.created_at DESC`,
+         WHERE a.job_id = $1 ORDER BY a.created_at DESC`,
         [jobId],
       );
 
+      const data = result.rows.map(formatApplication);
+      await cache.set(cacheKey, data);
       return response(res, 200, "Applications retrieved", {
-        applications: result.rows,
+        applications: data,
       });
     } catch (error) {
       next(error);
     }
   },
-
   async updateStatus(req, res, next) {
     try {
       const { id } = req.params;
-
       const { error, value } = updateApplicationSchema.validate(req.body);
-
-      if (error) {
-        return next(new InvariantError(error.details[0].message));
-      }
+      if (error) return next(new InvariantError(error.details[0].message));
 
       const existing = await pool.query(
-        "SELECT id FROM applications WHERE id = $1",
+        "SELECT id, user_id, job_id FROM applications WHERE id = $1",
         [id],
       );
+      if (existing.rows.length === 0)
+        return next(new NotFoundError("Application not found"));
 
-      if (existing.rows.length === 0) {
-        return next(new NotFoundError(`Application not found`));
-      }
+      const { user_id, job_id } = existing.rows[0];
 
       const result = await pool.query(
-        `UPDATE applications
-         SET status = $1, updated_at = NOW()
-         WHERE id = $2
-         RETURNING *`,
+        `UPDATE applications SET status = $1, updated_at = NOW()
+         WHERE id = $2 RETURNING *`,
         [value.status, id],
       );
 
-      return response(
-        res,
-        200,
-        "Application status updated",
-        formatApplication(result.rows[0]),
+      await cache.del(
+        `applications:${id}`,
+        `applications:user:${user_id}`,
+        `applications:job:${job_id}`,
       );
+
+      return response(res, 200, "Application status updated", result.rows[0]);
     } catch (error) {
       next(error);
     }
   },
-
   async remove(req, res, next) {
     try {
       const { id } = req.params;

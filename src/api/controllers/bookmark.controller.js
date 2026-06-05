@@ -2,6 +2,7 @@ const pool = require("../../database/pool");
 const { NotFoundError, InvariantError } = require("../../exceptions");
 const { generateId } = require("../../utils");
 const response = require("../../utils/response");
+const cache = require("../../utils/cache");
 
 const BOOKMARK_SELECT = `
   b.id,
@@ -38,29 +39,25 @@ const BookmarkController = {
       const job = await pool.query("SELECT id FROM jobs WHERE id = $1", [
         jobId,
       ]);
-
-      if (job.rows.length === 0) {
-        return next(new NotFoundError(`Job not found`));
-      }
+      if (job.rows.length === 0)
+        return next(new NotFoundError(`Job with id ${jobId} not found`));
 
       const existing = await pool.query(
         "SELECT id FROM bookmarks WHERE user_id = $1 AND job_id = $2",
         [userId, jobId],
       );
-
       if (existing.rows.length > 0) {
         return next(new InvariantError("You have already bookmarked this job"));
       }
 
-      const id = generateId();
-
+      const id = generateId("bookmark");
       const result = await pool.query(
         `INSERT INTO bookmarks (id, user_id, job_id, created_at)
-         VALUES ($1, $2, $3, NOW())
-         RETURNING *`,
+         VALUES ($1, $2, $3, NOW()) RETURNING *`,
         [id, userId, jobId],
       );
 
+      await cache.del(`bookmarks:${userId}`);
       return response(res, 201, "Job bookmarked", result.rows[0]);
     } catch (error) {
       next(error);
@@ -96,16 +93,15 @@ const BookmarkController = {
         "SELECT id FROM bookmarks WHERE user_id = $1 AND job_id = $2",
         [userId, jobId],
       );
-
-      if (existing.rows.length === 0) {
+      if (existing.rows.length === 0)
         return next(new NotFoundError("Bookmark not found"));
-      }
 
       await pool.query(
         "DELETE FROM bookmarks WHERE user_id = $1 AND job_id = $2",
         [userId, jobId],
       );
 
+      await cache.del(`bookmarks:${userId}`);
       return response(res, 200, "Bookmark removed", null);
     } catch (error) {
       next(error);
@@ -115,14 +111,20 @@ const BookmarkController = {
   async getMyBookmarks(req, res, next) {
     try {
       const userId = req.user.id;
+      const cacheKey = `bookmarks:${userId}`;
+
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return response(res, 200, "Bookmarks retrieved", { bookmarks: cached });
+      }
 
       const result = await pool.query(
         `SELECT ${BOOKMARK_SELECT} ${BOOKMARK_JOIN}
-         WHERE b.user_id = $1
-         ORDER BY b.created_at DESC`,
+         WHERE b.user_id = $1 ORDER BY b.created_at DESC`,
         [userId],
       );
 
+      await cache.set(cacheKey, result.rows);
       return response(res, 200, "Bookmarks retrieved", {
         bookmarks: result.rows,
       });
