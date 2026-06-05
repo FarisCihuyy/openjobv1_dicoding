@@ -8,10 +8,12 @@ const BOOKMARK_SELECT = `
   b.created_at,
   j.id    AS job_id,
   j.title AS job_title,
+  j.description AS job_description,
   j.job_type,
   j.location_type,
   j.location_city,
   j.status AS job_status,
+  j.salary_max AS job_salary_max,
   c.id    AS company_id,
   c.name  AS company_name,
   c.location AS company_location,
@@ -83,7 +85,7 @@ const ProfileController = {
       );
 
       return response(res, 200, "Applications retrieved", {
-        applications: result.rows.map(formatApplication),
+        applications: result.rows,
       });
     } catch (error) {
       next(error);

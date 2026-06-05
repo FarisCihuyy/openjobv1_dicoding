@@ -17,6 +17,10 @@ const formatApplication = (row) => ({
     name: row.user_name,
     email: row.user_email,
   },
+  job_id: row.job_id,
+  job_title: row.job_title,
+  job_description: row.job_description,
+  job_location_city: row.job_location,
   job: {
     id: row.job_id,
     title: row.job_title,
@@ -27,11 +31,13 @@ const formatApplication = (row) => ({
       name: row.company_name,
     },
   },
+  document_url: row.document_file_url,
   document: row.document_id
     ? {
         id: row.document_id,
         file_name: row.document_file_name,
-        file_url: row.document_file_url,
+        original_name: row.document_original_name,
+        file_url: row.document_url,
       }
     : null,
 });

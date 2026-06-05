@@ -6,4 +6,13 @@ const companySchema = Joi.object({
   location: Joi.string().max(255).required(),
 });
 
-module.exports = companySchema;
+const updateCompanySchema = Joi.object({
+  name: Joi.string().max(255),
+  description: Joi.string().min(5),
+  location: Joi.string().max(255),
+});
+
+module.exports = {
+  companySchema,
+  updateCompanySchema,
+};

@@ -9,7 +9,7 @@ const DocumentController = {
   async getAll(req, res, next) {
     try {
       const result = await pool.query(
-        `SELECT id, user_id, file_name, file_url, created_at, updated_at
+        `SELECT id, user_id, original_name, file_url, size, created_at, updated_at
          FROM documents
          ORDER BY created_at DESC`,
       );
@@ -22,13 +22,12 @@ const DocumentController = {
     }
   },
 
-  // GET /documents/:id — Get document by ID (protected)
   async getById(req, res, next) {
     try {
       const { id } = req.params;
 
       const result = await pool.query(
-        "SELECT id, user_id, file_name, file_url, created_at, updated_at FROM documents WHERE id = $1",
+        "SELECT file_name, original_name FROM documents WHERE id = $1",
         [id],
       );
 
@@ -36,7 +35,17 @@ const DocumentController = {
         return next(new NotFoundError("Document not found"));
       }
 
-      return response(res, 200, "Document retrieved", result.rows[0]);
+      const file = result.rows[0];
+
+      const filePath = path.join(__dirname, "../../uploads", file.file_name);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${file.original_name}"`,
+      );
+
+      return res.sendFile(filePath);
     } catch (error) {
       next(error);
     }
@@ -46,19 +55,21 @@ const DocumentController = {
   async upload(req, res, next) {
     try {
       if (!req.file) {
-        return next(new InvariantError("required"));
+        return next(new InvariantError("File is required"));
       }
 
       const userId = req.user.id;
       const id = generateId();
-      const file_name = req.file.originalname;
+      const originalName = req.file.originalname;
+      const file_name = req.file.filename;
       const file_url = `/uploads/${req.file.filename}`;
+      const size = req.file.size;
 
       const result = await pool.query(
-        `INSERT INTO documents (id, user_id, file_name, file_url, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
-         RETURNING id, user_id, file_name, file_url, created_at, updated_at`,
-        [id, userId, file_name, file_url],
+        `INSERT INTO documents (id, user_id, original_name, file_name, file_url, size, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         RETURNING id AS "documentId", user_id, original_name AS "originalName", file_name AS "filename", file_url, size, created_at, updated_at`,
+        [id, userId, originalName, file_name, file_url, size],
       );
 
       return response(res, 201, "Document uploaded", result.rows[0]);

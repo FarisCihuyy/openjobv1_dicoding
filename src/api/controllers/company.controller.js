@@ -6,15 +6,17 @@ const {
   AuthenticationError,
 } = require("../../exceptions");
 const { generateId } = require("../../utils");
-const companySchema = require("../validations/company.validation");
+const {
+  companySchema,
+  updateCompanySchema,
+} = require("../validations/company.validation");
 const cache = require("../../utils/cache");
 
 const CompanyController = {
   async getAll(req, res, next) {
     try {
       const result = await pool.query(
-        `SELECT id, name, description, location
-         FROM companies
+        `SELECT * FROM companies
          ORDER BY created_at DESC`,
       );
 
@@ -74,7 +76,7 @@ const CompanyController = {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const { error, value } = companySchema.validate(req.body);
+      const { error, value } = updateCompanySchema.validate(req.body);
       if (error) return next(new InvariantError(error.details[0].message));
 
       const existing = await pool.query(

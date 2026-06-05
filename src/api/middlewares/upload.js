@@ -1,11 +1,10 @@
 const multer = require("multer");
 const path = require("path");
 const { InvariantError } = require("../../exceptions");
-const response = require("../../utils/response");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, path.join(__dirname, "../../uploads"));
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -18,7 +17,7 @@ const fileFilter = (req, file, cb) => {
   if (file.mimetype === "application/pdf") {
     cb(null, true);
   } else {
-    cb(response(), false);
+    cb(new InvariantError("Only PDF File is required"), false);
   }
 };
 

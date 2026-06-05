@@ -18,8 +18,6 @@ const JOB_SELECT = `
   j.status,
   c.id          AS company_id,
   c.name        AS company_name,
-  c.location    AS company_location,
-  cat.id        AS category_id,
   cat.name      AS category_name
 `;
 
